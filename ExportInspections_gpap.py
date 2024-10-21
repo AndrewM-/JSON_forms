@@ -116,7 +116,7 @@ def control_list(form_name, form_items):
     for control in form_items:
         if is_picture(control):
             photospec = get_image_name(control["value"])
-            control_info = ""
+            control_text = ""
             for images in photospec: 
                 image_spec = image_folder + "/" + images
                 height, width = get_orientation(image_spec)
@@ -131,19 +131,19 @@ def control_list(form_name, form_items):
                     scaled_height = str(int(height / scale_factor))
                     scaled_width = str(int(width / scale_factor))
 
-                control_info += "<p><img width=\"" + scaled_width + "\" height=\"" + scaled_height + "\" src=\"" + "file:///" + image_spec + "\"/></p>\n"
+                control_text += "<p><img width=\"" + scaled_width + "\" height=\"" + scaled_height + "\" src=\"" + "file:///" + image_spec + "\"/></p>\n"
         else:
             control_info = str(control_data(control).strip())
             if control_info[:1] == ":": 
-                control_top = "<h3>" + form_name + control_info + "</h3>\n"
+                control_top = "<h3>" + form_name + "</h3>\n"
                 control_info = ""
             else:
                 if control_info[-1] == ":" or control_info[-1] == "-":
-                    control_info = "\t<li style=\"color:lightgray\">" + control_info + "</li>\n"
+                    pass
                 else:
-                    control_info = "\t<li>" + control_info[-1] + "</li>\n"
-        
-        control_text += control_info
+                    split_position = control_info.index(":")
+                    control_value = "\t<li><em>" + control_info[:split_position + 2] + "</em><strong> " + control_info[split_position + 2:] + "</strong></li>\n"
+                    control_text += control_value
     
     return control_top + "<ul>\n" + control_text + "</ul>\n"
 
