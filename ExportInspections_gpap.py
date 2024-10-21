@@ -2,12 +2,14 @@ import os
 import json
 import sqlite3
 import datetime
+from PIL import Image, ExifTags
 
 # external variables
 dbfile = "E:\\Wedgetail\\Eugowra\Photos\\2024-10-03\\Eugowra-plots.gpap"
 image_folder = "E:/Wedgetail/Eugowra/Photos/2024-10-03"
 output_file_name = "Eugowra_Plots.html"
 dummy_imagespec = "dummy.jpg"
+photo_size = 400
 
 def remove_file(f):
     try:
@@ -116,7 +118,20 @@ def control_list(form_name, form_items):
             photospec = get_image_name(control["value"])
             control_info = ""
             for images in photospec: 
-                control_info += "<p><img width=\"150\" height=\"200\" src=\"" + "file:///" + image_folder + "/" + images + "\"/></p>\n"
+                image_spec = image_folder + "/" + images
+                height, width = get_orientation(image_spec)
+                scaled_height = 0
+                scaled_width = 0
+                if height > width:
+                    scale_factor = height / photo_size
+                    scaled_height = str(int(height / scale_factor))
+                    scaled_width = str(int(width / scale_factor))
+                else:
+                    scale_factor = width / photo_size
+                    scaled_height = str(int(height / scale_factor))
+                    scaled_width = str(int(width / scale_factor))
+
+                control_info += "<p><img width=\"" + scaled_width + "\" height=\"" + scaled_height + "\" src=\"" + "file:///" + image_spec + "\"/></p>\n"
         else:
             control_info = str(control_data(control).strip())
             if control_info[:1] == ":": 
@@ -124,9 +139,9 @@ def control_list(form_name, form_items):
                 control_info = ""
             else:
                 if control_info[-1] == ":" or control_info[-1] == "-":
-                    control_info = "\t<span style=\"color:lightgray\"><li>" + control_info + "</li></span>\n"
+                    control_info = "\t<li style=\"color:lightgray\">" + control_info + "</li>\n"
                 else:
-                    control_info = "\t<li>" + control_info + "</li>\n"
+                    control_info = "\t<li>" + control_info[-1] + "</li>\n"
         
         control_text += control_info
     
@@ -179,6 +194,38 @@ def get_image_name(image_ids):
         file_names.append(row[1])
     
     return file_names
+
+def rotate_image(image_name):
+    pass
+
+def get_orientation(image_spec):
+    try:
+        image=Image.open(image_spec)
+        height, width = image.size
+
+        for orientation in ExifTags.TAGS.keys():
+            if ExifTags.TAGS[orientation]=='Orientation':
+                break
+        
+        exif = image._getexif()
+        if exif == None:
+            return height, width
+
+        if exif[orientation] == 3:
+            image=image.rotate(180, expand=True)
+        elif exif[orientation] == 6:
+            image=image.rotate(270, expand=True)
+        elif exif[orientation] == 8:
+            image=image.rotate(90, expand=True)
+
+        image.save(image_spec)
+        height, width = image.size
+        image.close()
+    except (AttributeError, KeyError, IndexError):
+        # cases: image don't have getexif
+        pass
+
+    return height, width
 
 if __name__ == '__main__':
     db = open_db()
