@@ -1,0 +1,2 @@
+sqlite3-utils>=3.35.0
+struct>=0.2
