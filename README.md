@@ -9,4 +9,4 @@ I worked on a large wind farm construction project and would have to inspect eac
 New forms are created using JSON in a text editor or by using the integrated forms editor.  I have created a ms-access based form designer with a GUI, but ms-access is not GIT friendly, so I have not uploaded it.
 
 ## Limitations
- I need to open the exported geopackage in QGIS to add and fill fields for Latitude and Longitude.  Smash exports point geometry objects which contain Latitude and Longitude but which I cannot unpack yet, without adding in a library dependency.  
+ I need to open the exported geopackage in QGIS to add and fill fields for Latitude and Longitude.  Smash exports point geometry objects which contain Latitude and Longitude but which I cannot unpack yet, without adding in a library dependency.  This limitation does not apply to ExportInspection_gpap.py which reads the native data format of Smash.  There is an assumption that you have exported the images from the gpap file, into an image folder that needs to be updated in the code.  Smash stores the photo data inside the SQLite database as blobs, which need to be extracted first before a web page can be created.
