@@ -1,3 +1,4 @@
+# ACM
 import os
 import json
 import sqlite3
@@ -5,7 +6,7 @@ import datetime
 from PIL import Image, ExifTags
 
 # external variables
-dbfile = "E:\\Wedgetail\\Eugowra\Photos\\2024-10-03\\Eugowra-plots.gpap"
+dbfile = "E:/Wedgetail/Eugowra/Photos/2024-10-03/Eugowra-plots.gpap"
 image_folder = "E:/Wedgetail/Eugowra/Photos/2024-10-03"
 output_file_name = "Eugowra_Plots.html"
 dummy_imagespec = "dummy.jpg"
@@ -131,7 +132,7 @@ def control_list(form_name, form_items):
                     scaled_height = str(int(height / scale_factor))
                     scaled_width = str(int(width / scale_factor))
 
-                control_text += "<p><img width=\"" + scaled_width + "\" height=\"" + scaled_height + "\" src=\"" + "file:///" + image_spec + "\"/></p>\n"
+                control_text += "<p><a href=\"" + "file:///" + image_spec + "\"><img width=\"" + scaled_width + "\" height=\"" + scaled_height + "\" src=\"" + "file:///" + image_spec + "\"/></a></p>\n"
         else:
             control_info = str(control_data(control).strip())
             if control_info[:1] == ":": 
@@ -201,7 +202,7 @@ def rotate_image(image_name):
 def get_orientation(image_spec):
     try:
         image=Image.open(image_spec)
-        height, width = image.size
+        width, height = image.size
 
         for orientation in ExifTags.TAGS.keys():
             if ExifTags.TAGS[orientation]=='Orientation':
@@ -219,7 +220,7 @@ def get_orientation(image_spec):
             image=image.rotate(90, expand=True)
 
         image.save(image_spec)
-        height, width = image.size
+        width, height = image.size
         image.close()
     except (AttributeError, KeyError, IndexError):
         # cases: image don't have getexif
