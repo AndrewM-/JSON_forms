@@ -4,13 +4,30 @@ import json
 import sqlite3
 import datetime
 from PIL import Image, ExifTags
+from config import DEFAULT_CONFIG
 
-# external variables
-dbfile = "E:/Wedgetail/Eugowra/Photos/2024-10-03/Eugowra-plots.gpap"
-image_folder = "E:/Wedgetail/Eugowra/Photos/2024-10-03"
-output_file_name = "Eugowra_Plots.html"
-dummy_imagespec = "dummy.jpg"
-photo_size = 400
+# Use the config
+def generate_inspection_report(dbfile=None, image_folder=None, output_file_name=None, dummy_imagespec="dummy.jpg", photo_size=400):
+    # If parameters are not provided, use the config
+    if dbfile is None or image_folder is None or output_file_name is None:
+        config = DEFAULT_CONFIG
+        dbfile = config["dbfile"]
+        image_folder = config["image_folder"]
+        output_file_name = config["output_file_name"]
+        dummy_imagespec = config["dummy_imagespec"]
+        photo_size = config["photo_size"]
+    
+    db = open_db(dbfile)
+    all_rows = get_notes(db)
+    output_filespec = image_folder + "\\" + output_file_name
+    remove_file(output_filespec)
+    web_text = get_contents(all_rows, db, image_folder, photo_size)
+    write_file(output_filespec=output_filespec, t=web_text)
+    print("done")
+    try: # should work on Windows
+        os.startfile(output_filespec)
+    except OSError:
+        print('Could not open URL')
 
 def remove_file(f):
     try:
@@ -18,12 +35,17 @@ def remove_file(f):
     except:
         pass 
         
-def get_contents(rows):
+def get_contents(rows, db, image_folder=None, photo_size=None):
+    if image_folder is None:
+        image_folder = DEFAULT_CONFIG["image_folder"]
+    if photo_size is None:
+        photo_size = DEFAULT_CONFIG["photo_size"]
+        
     s = " "
     longitude_index = get_longitude_index(db)
     latitude_index = get_latitude_index(db)
     for row in rows:
-         s += row_level(row, longitude_index, latitude_index)
+         s += row_level(row, longitude_index, latitude_index, image_folder, photo_size)
 
     return s
 
@@ -45,7 +67,7 @@ def get_longitude_index(db):
         if columns[0].upper() == "LON":
             return i
 
-def row_level(row_data, longitude_index, latitude_index):
+def row_level(row_data, longitude_index, latitude_index, image_folder, photo_size):
     row_level_text = "<!DOCTYPE html>\n"
     forms = {}
     id = " "
@@ -72,44 +94,64 @@ def row_level(row_data, longitude_index, latitude_index):
 
     row_level_text += "<h2>" + id + " - " + section_name + "</h2>\n"  
     row_level_text += "<p>" + timestamp_string + " &nbsp(" + longitude + ", " + latitude + ")</p>\n"
-    row_level_text += form_items(forms)  
+    row_level_text += form_items(forms, image_folder, photo_size)  
     return row_level_text  
 
-def form_items(form_data):
+def form_items(form_data, image_folder=None, photo_size=None):
+    if image_folder is None:
+        image_folder = DEFAULT_CONFIG["image_folder"]
+    if photo_size is None:
+        photo_size = DEFAULT_CONFIG["photo_size"]
+        
     form_name_level = ""
     if form_data is None:
         form_name_level = " "
     else:
         form_json = json.loads(form_data)
-        form_name_level = top_dictionary(form_json)
+        form_name_level = top_dictionary(form_json, image_folder, photo_size)
 
     return form_name_level
 
-def top_dictionary(dict_items):
+def top_dictionary(dict_items, image_folder=None, photo_size=None):
+    if image_folder is None:
+        image_folder = DEFAULT_CONFIG["image_folder"]
+    if photo_size is None:
+        photo_size = DEFAULT_CONFIG["photo_size"]
+        
     form_name_level = ""
     page_name = " "
     page_text = " "
     json_items = dict_items["forms"]
     for item in json_items:
-        page_text += lower_dict(item)
+        page_text += lower_dict(item, image_folder, photo_size)
     
     form_name_level = page_text + "</ul>\n"
     return form_name_level
 
-def lower_dict(form_dict):
+def lower_dict(form_dict, image_folder=None, photo_size=None):
+    if image_folder is None:
+        image_folder = DEFAULT_CONFIG["image_folder"]
+    if photo_size is None:
+        photo_size = DEFAULT_CONFIG["photo_size"]
+        
     start_list = ""
     lower_dict_text = ""
     form_values = " "
     form_stuff = []
     form_name = form_dict["formname"]
     form_stuff = form_dict["formitems"]
-    form_values = control_list(form_name, form_stuff).lstrip()
+    form_values = control_list(form_name, form_stuff, image_folder, photo_size).lstrip()
     if not form_values is None:
         lower_dict_text = form_values
     
     return lower_dict_text 
     
-def control_list(form_name, form_items):
+def control_list(form_name, form_items, image_folder=None, photo_size=None):
+    if image_folder is None:
+        image_folder = DEFAULT_CONFIG["image_folder"]
+    if photo_size is None:
+        photo_size = DEFAULT_CONFIG["photo_size"]
+        
     control_top = " "
     control_text = ""
     control_info = " "
@@ -171,8 +213,12 @@ def write_file(output_filespec, t):
     f.write(t)
     f.close()
 
-def open_db():
-    db = sqlite3.connect(dbfile) 
+def open_db(custom_dbfile=None):
+    if custom_dbfile is None:
+        # Use the default config if none is provided
+        custom_dbfile = DEFAULT_CONFIG["dbfile"]
+    
+    db = sqlite3.connect(custom_dbfile) 
     return db
 
 def get_notes(db):
@@ -184,17 +230,19 @@ def get_notes(db):
 
 def get_image_name(image_ids):
     image_ids = image_ids.replace(";", ",")
-    db = sqlite3.connect(dbfile) 
+    db = sqlite3.connect(DEFAULT_CONFIG["dbfile"]) 
     cursor = db.cursor()
     sql = "SELECT _id, text FROM images WHERE _id IN(" + str(image_ids) + ")"
     cursor.execute(sql)
     rows = cursor.fetchall()
     cursor.close()
-    file_names = []
-    for row in rows:
-        file_names.append(row[1])
+    db.close()
     
-    return file_names
+    image_names = []
+    for row in rows:
+        image_names.append(row[1])
+    
+    return image_names
 
 def rotate_image(image_name):
     pass
@@ -229,14 +277,4 @@ def get_orientation(image_spec):
     return height, width
 
 if __name__ == '__main__':
-    db = open_db()
-    all_rows = get_notes(db)
-    output_filespec = image_folder + "\\" +output_file_name
-    remove_file(output_filespec)
-    web_text = get_contents(all_rows)
-    write_file(output_filespec=output_filespec, t=web_text)
-    print("done")
-    try: # should work on Windows
-        os.startfile(output_filespec)
-    except OSError:
-        print('Could not open URL')
+     generate_inspection_report()
