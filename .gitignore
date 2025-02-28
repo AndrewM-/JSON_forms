@@ -14,3 +14,5 @@ work_areas.py
 .venv
 venv/
 venv\
+*.pyc
+*.gpap
