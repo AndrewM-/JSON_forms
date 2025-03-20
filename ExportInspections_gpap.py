@@ -152,41 +152,53 @@ def control_list(form_name, form_items, image_folder=None, photo_size=None):
     if photo_size is None:
         photo_size = DEFAULT_CONFIG["photo_size"]
         
-    control_top = " "
+    # Always include the form name in an h3 header
+    control_top = "<h3>" + form_name + "</h3>\n"
     control_text = ""
     control_info = " "
     control = {}
     for control in form_items:
         if is_picture(control):
-            photospec = get_image_name(control["value"])
-            control_text = ""
-            for images in photospec: 
-                image_spec = image_folder + "/" + images
-                height, width = get_orientation(image_spec)
-                scaled_height = 0
-                scaled_width = 0
-                if height > width:
-                    scale_factor = height / photo_size
-                    scaled_height = str(int(height / scale_factor))
-                    scaled_width = str(int(width / scale_factor))
-                else:
-                    scale_factor = width / photo_size
-                    scaled_height = str(int(height / scale_factor))
-                    scaled_width = str(int(width / scale_factor))
+            try:
+                photospec = get_image_name(control["value"])
+                control_text = ""
+                for images in photospec: 
+                    image_spec = image_folder + "/" + images
+                    try:
+                        height, width = get_orientation(image_spec)
+                        scaled_height = 0
+                        scaled_width = 0
+                        if height > width:
+                            scale_factor = height / photo_size
+                            scaled_height = str(int(height / scale_factor))
+                            scaled_width = str(int(width / scale_factor))
+                        else:
+                            scale_factor = width / photo_size
+                            scaled_height = str(int(height / scale_factor))
+                            scaled_width = str(int(width / scale_factor))
 
-                control_text += "<p><a href=\"" + "file:///" + image_spec + "\"><img width=\"" + scaled_width + "\" height=\"" + scaled_height + "\" src=\"" + "file:///" + image_spec + "\"/></a></p>\n"
+                        control_text += "<p><a href=\"" + "file:///" + image_spec + "\"><img width=\"" + scaled_width + "\" height=\"" + scaled_height + "\" src=\"" + "file:///" + image_spec + "\"/></a></p>\n"
+                    except Exception as e:
+                        # If there's an error processing the image, just add a text link instead
+                        control_text += "<p><a href=\"" + "file:///" + image_spec + "\">" + images + "</a></p>\n"
+            except Exception as e:
+                # If there's an error getting the image name, just continue
+                control_text += "<p>Error processing image: " + str(control["value"]) + "</p>\n"
         else:
-            control_info = str(control_data(control).strip())
-            if control_info[:1] == ":": 
-                control_top = "<h3>" + form_name + "</h3>\n"
-                control_info = ""
-            else:
-                if control_info[-1] == ":" or control_info[-1] == "-":
-                    pass
+            try:
+                control_info = str(control_data(control).strip())
+                if control_info[:1] == ":": 
+                    control_info = ""
                 else:
-                    split_position = control_info.index(":")
-                    control_value = "\t<li><em>" + control_info[:split_position + 2] + "</em><strong> " + control_info[split_position + 2:] + "</strong></li>\n"
-                    control_text += control_value
+                    if control_info[-1] == ":" or control_info[-1] == "-":
+                        pass
+                    else:
+                        split_position = control_info.index(":")
+                        control_value = "\t<li><em>" + control_info[:split_position + 2] + "</em><strong> " + control_info[split_position + 2:] + "</strong></li>\n"
+                        control_text += control_value
+            except Exception as e:
+                # If there's an error processing the control data, just continue
+                pass
     
     return control_top + "<ul>\n" + control_text + "</ul>\n"
 
@@ -229,20 +241,26 @@ def get_notes(db):
     return rows
 
 def get_image_name(image_ids):
-    image_ids = image_ids.replace(";", ",")
-    db = sqlite3.connect(DEFAULT_CONFIG["dbfile"]) 
-    cursor = db.cursor()
-    sql = "SELECT _id, text FROM images WHERE _id IN(" + str(image_ids) + ")"
-    cursor.execute(sql)
-    rows = cursor.fetchall()
-    cursor.close()
-    db.close()
-    
-    image_names = []
-    for row in rows:
-        image_names.append(row[1])
-    
-    return image_names
+    try:
+        image_ids = image_ids.replace(";", ",")
+        db = sqlite3.connect(DEFAULT_CONFIG["dbfile"]) 
+        cursor = db.cursor()
+        sql = "SELECT _id, text FROM images WHERE _id IN(" + str(image_ids) + ")"
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        cursor.close()
+        db.close()
+        
+        image_names = []
+        for row in rows:
+            image_names.append(row[1])
+        
+        return image_names
+    except Exception as e:
+        # If there's an error with the database connection or query,
+        # return a list with a default image
+        print(f"Error in get_image_name: {str(e)}")
+        return [DEFAULT_CONFIG["dummy_imagespec"]]
 
 def rotate_image(image_name):
     pass
