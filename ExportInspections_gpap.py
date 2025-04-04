@@ -1,13 +1,25 @@
 # ACM
+"""
+ExportInspections_gpap.py
+========================
+
+This script exports inspection reports from a GPAP/SQLite database to a HTML file.
+GPAP files are the native database files for the Smash digital mapper software.
+"""
 import os
 import json
 import sqlite3
 import datetime
+from typing import List, Dict, Any, Tuple, Optional, Union
 from PIL import Image, ExifTags
 from config import DEFAULT_CONFIG
 
 # Use the config
-def generate_inspection_report(dbfile=None, image_folder=None, output_file_name=None, dummy_imagespec="dummy.jpg", photo_size=400):
+def generate_inspection_report(dbfile: Optional[str] = None, 
+                              image_folder: Optional[str] = None, 
+                              output_file_name: Optional[str] = None, 
+                              dummy_imagespec: str = "dummy.jpg", 
+                              photo_size: int = 400) -> None:
     # If parameters are not provided, use the config
     if dbfile is None or image_folder is None or output_file_name is None:
         config = DEFAULT_CONFIG
@@ -29,13 +41,15 @@ def generate_inspection_report(dbfile=None, image_folder=None, output_file_name=
     except OSError:
         print('Could not open URL')
 
-def remove_file(f):
+def remove_file(f: str) -> None:
     try:
         os.remove(f)
     except:
         pass 
         
-def get_contents(rows, db, image_folder=None, photo_size=None):
+def get_contents(rows: List[Tuple], db: sqlite3.Connection, 
+                image_folder: Optional[str] = None, 
+                photo_size: Optional[int] = None) -> str:
     if image_folder is None:
         image_folder = DEFAULT_CONFIG["image_folder"]
     if photo_size is None:
@@ -49,7 +63,7 @@ def get_contents(rows, db, image_folder=None, photo_size=None):
 
     return s
 
-def get_latitude_index(db):
+def get_latitude_index(db: sqlite3.Connection) -> Optional[int]:
     cursor = db.cursor()
     data = cursor.execute("SELECT * FROM notes")
     i = -1
@@ -57,8 +71,9 @@ def get_latitude_index(db):
         i += 1
         if columns[0].upper() == "LAT":
             return i
+    return None
 
-def get_longitude_index(db):
+def get_longitude_index(db: sqlite3.Connection) -> Optional[int]:
     cursor = db.cursor()
     data = cursor.execute("SELECT * FROM notes")
     i = -1
@@ -66,17 +81,22 @@ def get_longitude_index(db):
         i += 1
         if columns[0].upper() == "LON":
             return i
+    return None
 
-def row_level(row_data, longitude_index, latitude_index, image_folder, photo_size):
+def row_level(row_data: Tuple, 
+             longitude_index: Optional[int], 
+             latitude_index: Optional[int], 
+             image_folder: str, 
+             photo_size: int) -> str:
     row_level_text = "<!DOCTYPE html>\n"
-    forms = {}
-    id = " "
-    section_name = " "
-    section_description = " " 
-    timestamp_string = " "   
-    geom = " "  
-    longitude = " "
-    latitude = " "
+    forms: Any = {}
+    id: str = " "
+    section_name: str = " "
+    section_description: str = " " 
+    timestamp_string: str = " "   
+    geom: str = " "  
+    longitude: str = " "
+    latitude: str = " "
     id = str(row_data[0])    
     forms = row_data[7]
     section_name = row_data[6]
@@ -97,7 +117,9 @@ def row_level(row_data, longitude_index, latitude_index, image_folder, photo_siz
     row_level_text += form_items(forms, image_folder, photo_size)  
     return row_level_text  
 
-def form_items(form_data, image_folder=None, photo_size=None):
+def form_items(form_data: Optional[str], 
+              image_folder: Optional[str] = None, 
+              photo_size: Optional[int] = None) -> str:
     if image_folder is None:
         image_folder = DEFAULT_CONFIG["image_folder"]
     if photo_size is None:
@@ -112,7 +134,9 @@ def form_items(form_data, image_folder=None, photo_size=None):
 
     return form_name_level
 
-def top_dictionary(dict_items, image_folder=None, photo_size=None):
+def top_dictionary(dict_items: Dict[str, Any], 
+                  image_folder: Optional[str] = None, 
+                  photo_size: Optional[int] = None) -> str:
     if image_folder is None:
         image_folder = DEFAULT_CONFIG["image_folder"]
     if photo_size is None:
@@ -128,7 +152,9 @@ def top_dictionary(dict_items, image_folder=None, photo_size=None):
     form_name_level = page_text + "</ul>\n"
     return form_name_level
 
-def lower_dict(form_dict, image_folder=None, photo_size=None):
+def lower_dict(form_dict: Dict[str, Any], 
+              image_folder: Optional[str] = None, 
+              photo_size: Optional[int] = None) -> str:
     if image_folder is None:
         image_folder = DEFAULT_CONFIG["image_folder"]
     if photo_size is None:
@@ -146,7 +172,10 @@ def lower_dict(form_dict, image_folder=None, photo_size=None):
     
     return lower_dict_text 
     
-def control_list(form_name, form_items, image_folder=None, photo_size=None):
+def control_list(form_name: str, 
+                form_items: List[Dict[str, Any]], 
+                image_folder: Optional[str] = None, 
+                photo_size: Optional[int] = None) -> str:
     if image_folder is None:
         image_folder = DEFAULT_CONFIG["image_folder"]
     if photo_size is None:
@@ -156,7 +185,7 @@ def control_list(form_name, form_items, image_folder=None, photo_size=None):
     control_top = "<h3>" + form_name + "</h3>\n"
     control_text = ""
     control_info = " "
-    control = {}
+    control: Dict[str, Any] = {}
     for control in form_items:
         if is_picture(control):
             try:
@@ -166,8 +195,8 @@ def control_list(form_name, form_items, image_folder=None, photo_size=None):
                     image_spec = image_folder + "/" + images
                     try:
                         height, width = get_orientation(image_spec)
-                        scaled_height = 0
-                        scaled_width = 0
+                        scaled_height: int = 0
+                        scaled_width: int = 0
                         if height > width:
                             scale_factor = height / photo_size
                             scaled_height = str(int(height / scale_factor))
@@ -202,16 +231,16 @@ def control_list(form_name, form_items, image_folder=None, photo_size=None):
     
     return control_top + "<ul>\n" + control_text + "</ul>\n"
 
-def is_picture(control):
+def is_picture(control: Dict[str, Any]) -> bool:
     if control["type"] == "pictures":
         return True
     else:
         return False
 
-def maKe_picture_frames():
+def maKe_picture_frames() -> None:
     pass
 
-def control_data(control):
+def control_data(control: Dict[str, Any]) -> str:
     try:
         control_name = control["key"]
     except:
@@ -220,12 +249,12 @@ def control_data(control):
     control_value = control["value"]
     return control_name + ": " + str(control_value)
 
-def write_file(output_filespec, t):
+def write_file(output_filespec: str, t: str) -> None:
     f = open(output_filespec, "w")
     f.write(t)
     f.close()
 
-def open_db(custom_dbfile=None):
+def open_db(custom_dbfile: Optional[str] = None) -> sqlite3.Connection:
     if custom_dbfile is None:
         # Use the default config if none is provided
         custom_dbfile = DEFAULT_CONFIG["dbfile"]
@@ -233,14 +262,14 @@ def open_db(custom_dbfile=None):
     db = sqlite3.connect(custom_dbfile) 
     return db
 
-def get_notes(db):
+def get_notes(db: sqlite3.Connection) -> List[Tuple]:
     cursor = db.cursor()
     cursor.execute("SELECT * FROM notes")
     rows = cursor.fetchall()
     cursor.close()
     return rows
 
-def get_image_name(image_ids):
+def get_image_name(image_ids: str) -> List[str]:
     try:
         image_ids = image_ids.replace(";", ",")
         db = sqlite3.connect(DEFAULT_CONFIG["dbfile"]) 
@@ -251,7 +280,7 @@ def get_image_name(image_ids):
         cursor.close()
         db.close()
         
-        image_names = []
+        image_names: List[str] = []
         for row in rows:
             image_names.append(row[1])
         
@@ -262,10 +291,10 @@ def get_image_name(image_ids):
         print(f"Error in get_image_name: {str(e)}")
         return [DEFAULT_CONFIG["dummy_imagespec"]]
 
-def rotate_image(image_name):
+def rotate_image(image_name: str) -> None:
     pass
 
-def get_orientation(image_spec):
+def get_orientation(image_spec: str) -> Tuple[int, int]:
     # Commented out problematic code that was causing exceptions
     # try:
     #     image=Image.open(image_spec)
