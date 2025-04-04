@@ -1,2 +1,1 @@
-**Application is under current development**
-_Don't use this application_
+This code is in development.  Smash digital mapper is the best digital mapping system that I have used, however it lacks tools for validating data that has been collected.  Usually for every record collected, there is a photo or two.  I want to be able to confirm that the record captured in the form agrees with what I am seeing in the photo.  This code will export the inspection reports from a GPAP/SQLite database to a HTML file that can be reviewed in a web browser.
